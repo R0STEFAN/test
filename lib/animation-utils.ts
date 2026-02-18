@@ -595,8 +595,38 @@ export function buildGsapProps(tween: InteractionTween): GsapAnimationProps {
         return;
       }
 
-      const fromVal = toGsapValue(tween.from[prop.key], prop);
-      const toVal = toGsapValue(tween.to[prop.key], prop);
+      let fromVal = toGsapValue(tween.from[prop.key], prop);
+      let toVal = toGsapValue(tween.to[prop.key], prop);
+
+      // Normalize units for sizing (width/height) when one side is zero
+      // so GSAP can interpolate between same-unit values (e.g. 0% <-> 80%).
+      if ((prop.key === 'width' || prop.key === 'height') && (fromVal || toVal)) {
+        const asString = (v: unknown) => (v === undefined || v === null ? '' : String(v));
+        const f = asString(fromVal);
+        const t = asString(toVal);
+
+        const unitRegex = /(px|%|vh|vw|em|rem|ch|vmin|vmax)$/i;
+        const fUnit = (f.match(unitRegex) || [''])[0];
+        const tUnit = (t.match(unitRegex) || [''])[0];
+
+        const fNum = parseFloat(f) || 0;
+        const tNum = parseFloat(t) || 0;
+
+        // If one side is zero and units differ, coerce the zero side to the other's unit
+        if (fNum === 0 && tNum !== 0 && tUnit) {
+          fromVal = `0${tUnit}`;
+        } else if (tNum === 0 && fNum !== 0 && fUnit) {
+          toVal = `0${fUnit}`;
+        }
+
+        // Special case: both are numeric but different unit types and one is zero — ensure consistency
+        if (fNum === 0 && tNum === 0 && (fUnit || tUnit)) {
+          // prefer percent if either side had percent
+          const preferredUnit = fUnit || tUnit || 'px';
+          fromVal = `0${preferredUnit}`;
+          toVal = `0${preferredUnit}`;
+        }
+      }
 
       if (fromVal !== undefined && fromVal !== null) {
         fromProps[prop.key] = fromVal;
