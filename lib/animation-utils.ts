@@ -49,7 +49,7 @@ export function createSplitTextAnimation(
 
 // Types
 export type TriggerType = 'click' | 'hover' | 'scroll-into-view' | 'while-scrolling' | 'load';
-export type PropertyType = 'position-x' | 'position-y' | 'scale' | 'rotation' | 'skew-x' | 'skew-y' | 'opacity' | 'display' | 'split-text';
+export type PropertyType = 'position-x' | 'position-y' | 'scale' | 'rotation' | 'skew-x' | 'skew-y' | 'opacity' | 'display' | 'width' | 'height' | 'split-text';
 
 export interface PropertyConfig {
   key: keyof TweenProperties;
@@ -101,6 +101,28 @@ export const PROPERTY_OPTIONS: PropertyOption[] = [
       defaultFrom: '1',
       defaultFromAfterCurrent: '1',
       defaultTo: '1.3',
+    }],
+  },
+  {
+    type: 'width',
+    label: 'Width',
+    properties: [{
+      key: 'width',
+      unit: 'px',
+      defaultFrom: null,
+      defaultFromAfterCurrent: '0',
+      defaultTo: '200',
+    }],
+  },
+  {
+    type: 'height',
+    label: 'Height',
+    properties: [{
+      key: 'height',
+      unit: 'px',
+      defaultFrom: null,
+      defaultFromAfterCurrent: '0',
+      defaultTo: '200',
     }],
   },
   {
@@ -482,6 +504,10 @@ export function generateInitialAnimationCSS(layers: Layer[]): InitialAnimationRe
                   if (opacity === 0) {
                     styles.push(`visibility: hidden`);
                   }
+                } else if (prop.key === 'width') {
+                  styles.push(`width: ${value}${prop.unit}`);
+                } else if (prop.key === 'height') {
+                  styles.push(`height: ${value}${prop.unit}`);
                 } else if (prop.key === 'display') {
                   // Track elements that should start hidden using data attribute
                   if (value === 'hidden') {
