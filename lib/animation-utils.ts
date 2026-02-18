@@ -108,7 +108,7 @@ export const PROPERTY_OPTIONS: PropertyOption[] = [
     label: 'Width',
     properties: [{
       key: 'width',
-      unit: 'px',
+      unit: '', // accept typed units (%, vw, vh, px...)
       defaultFrom: '0',
       defaultFromAfterCurrent: '0',
       defaultTo: '200',
@@ -119,7 +119,7 @@ export const PROPERTY_OPTIONS: PropertyOption[] = [
     label: 'Height',
     properties: [{
       key: 'height',
-      unit: 'px',
+      unit: '', // accept typed units (%, vw, vh, px...)
       defaultFrom: '0',
       defaultFromAfterCurrent: '0',
       defaultTo: '200',
@@ -249,12 +249,30 @@ export function calculateTweenStartTime(tweens: InteractionTween[], index: numbe
 /** Convert a property value to GSAP-compatible format */
 export function toGsapValue(value: string | null | undefined, prop: PropertyConfig): string | number | undefined {
   if (value === null || value === undefined) return undefined;
+  const raw = String(value).trim();
+
   // autoAlpha is stored as percentage (0-100), convert to decimal (0-1) for GSAP
   if (prop.key === 'autoAlpha') {
-    return Number(value) / 100;
+    return Number(raw) / 100;
   }
-  // For other properties with units, append the unit
-  return prop.unit ? `${value}${prop.unit}` : value;
+
+  // If value already includes a CSS unit or is a non-numeric token (e.g. 'auto'), return as-is
+  const hasKnownUnit = /(-?\d+(?:\.\d+)?)(px|%|vh|vw|em|rem|ch|vmin|vmax)$/i.test(raw);
+  const isNumeric = /^-?\d+(?:\.\d+)?$/.test(raw);
+
+  if (hasKnownUnit) return raw;
+
+  if (isNumeric) {
+    // If a PropertyConfig defines a unit, append it (e.g. rotation -> deg)
+    if (prop.unit) return `${raw}${prop.unit}`;
+    // For CSS sizing (width/height) default to px when unit isn't set
+    if (prop.key === 'width' || prop.key === 'height') return `${raw}px`;
+    // Otherwise return numeric string (GSAP accepts numbers for transforms)
+    return raw;
+  }
+
+  // Non-numeric value (e.g. 'auto', 'min(100%, 400px)') — pass through
+  return raw;
 }
 
 /** Get all property options that are set in a tween (check both from and to) */
@@ -505,9 +523,11 @@ export function generateInitialAnimationCSS(layers: Layer[]): InitialAnimationRe
                     styles.push(`visibility: hidden`);
                   }
                 } else if (prop.key === 'width') {
-                  styles.push(`width: ${value}${prop.unit}`);
+                  const cssVal = toGsapValue(value as string, prop);
+                  styles.push(`width: ${cssVal}`);
                 } else if (prop.key === 'height') {
-                  styles.push(`height: ${value}${prop.unit}`);
+                  const cssVal = toGsapValue(value as string, prop);
+                  styles.push(`height: ${cssVal}`);
                 } else if (prop.key === 'display') {
                   // Track elements that should start hidden using data attribute
                   if (value === 'hidden') {
