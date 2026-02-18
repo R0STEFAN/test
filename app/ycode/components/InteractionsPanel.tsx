@@ -897,6 +897,8 @@ export default function InteractionsPanel({
         skewX: 'on-trigger',
         skewY: 'on-trigger',
         autoAlpha: 'on-trigger',
+        width: 'on-trigger',
+        height: 'on-trigger',
         display: 'on-trigger',
       },
     };
