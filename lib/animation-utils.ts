@@ -757,6 +757,47 @@ export function addTweenToTimeline(
   const { element, from, to, duration, ease, position, onComplete, splitText, splitElements: providedSplitElements } = options;
   const safeDur = safeDuration(duration);
 
+  // Helper — convert sizing values (%, vw, vh, px, numeric) to pixel numbers for the provided element
+  const normalizeSizingForElement = (propsObj: Record<string, unknown> | undefined, el: HTMLElement) => {
+    if (!propsObj) return propsObj;
+    const out: Record<string, unknown> = { ...propsObj };
+
+    const toPx = (raw: string, key: 'width' | 'height') => {
+      const s = String(raw).trim();
+      const pct = s.match(/^(-?\d+(?:\.\d+)?)%$/);
+      if (pct) {
+        const n = parseFloat(pct[1]);
+        const parent = el.parentElement || el;
+        const parentRect = parent.getBoundingClientRect();
+        const base = key === 'width' ? parentRect.width : parentRect.height;
+        return (base * (n / 100));
+      }
+      const vw = s.match(/^(-?\d+(?:\.\d+)?)vw$/i);
+      if (vw) return (window.innerWidth * (parseFloat(vw[1]) / 100));
+      const vh = s.match(/^(-?\d+(?:\.\d+)?)vh$/i);
+      if (vh) return (window.innerHeight * (parseFloat(vh[1]) / 100));
+      const px = s.match(/^(-?\d+(?:\.\d+)?)px$/i);
+      if (px) return parseFloat(px[1]);
+      const num = s.match(/^(-?\d+(?:\.\d+)?)$/);
+      if (num) return parseFloat(num[1]);
+      // fallback: return original string (e.g. 'auto', 'min()') — GSAP will handle or ignore
+      return s;
+    };
+
+    ['width', 'height'].forEach((k) => {
+      const key = k as 'width' | 'height';
+      if (out[key] !== undefined && out[key] !== null) {
+        const val = String(out[key]);
+        // Only normalize when value contains a unit we can convert or is numeric
+        if (/(-?\d+(?:\.\d+)?)(%|vw|vh|px)?$/i.test(val)) {
+          out[key] = toPx(val, key);
+        }
+      }
+    });
+
+    return out;
+  };
+
   // If splitText is enabled, we need to target child elements created by GSAP's SplitText
   if (splitText) {
     // Use provided split elements if available, otherwise try to query by class
@@ -769,7 +810,19 @@ export function addTweenToTimeline(
     }
 
     if (splitElements.length > 0) {
-      const { fromTo, fromOnly, toOnly, hasFromTo, hasFromOnly, hasToOnly } = separateAnimationProps(from, to);
+      let { fromTo, fromOnly, toOnly, hasFromTo, hasFromOnly, hasToOnly } = separateAnimationProps(from, to);
+
+      // Normalize sizing values to pixels for reliable interpolation when animating width/height
+      if (fromTo && (fromTo.from || fromTo.to)) {
+        fromTo = {
+          from: normalizeSizingForElement(fromTo.from as Record<string, unknown>, element),
+          to: normalizeSizingForElement(fromTo.to as Record<string, unknown>, element),
+        } as any;
+      }
+      if (fromOnly) fromOnly = normalizeSizingForElement(fromOnly as Record<string, unknown>, element) as any;
+      if (toOnly) toOnly = normalizeSizingForElement(toOnly as Record<string, unknown>, element) as any;
+
+      const { from: fFrom = {}, to: fTo = {} } = (fromTo || {}) as { from?: Record<string, unknown>; to?: Record<string, unknown> };
 
       // Use GSAP's stagger configuration directly
       // Can be a number (fixed delay) or { amount: duration } (total time to distribute)
@@ -782,9 +835,9 @@ export function addTweenToTimeline(
       if (hasFromTo) {
         timeline.fromTo(
           splitElements,
-          fromTo.from,
+          fFrom,
           {
-            ...fromTo.to,
+            ...fTo,
             duration: safeDur,
             ease,
             stagger: staggerConfig,
@@ -832,7 +885,17 @@ export function addTweenToTimeline(
   }
 
   // Regular animation without split text
-  const { fromTo, fromOnly, toOnly, hasFromTo, hasFromOnly, hasToOnly } = separateAnimationProps(from, to);
+  let { fromTo, fromOnly, toOnly, hasFromTo, hasFromOnly, hasToOnly } = separateAnimationProps(from, to);
+
+  // Normalize sizing values to pixels for reliable interpolation when animating width/height
+  if (fromTo && (fromTo.from || fromTo.to)) {
+    fromTo = {
+      from: normalizeSizingForElement(fromTo.from as Record<string, unknown>, element),
+      to: normalizeSizingForElement(fromTo.to as Record<string, unknown>, element),
+    } as any;
+  }
+  if (fromOnly) fromOnly = normalizeSizingForElement(fromOnly as Record<string, unknown>, element) as any;
+  if (toOnly) toOnly = normalizeSizingForElement(toOnly as Record<string, unknown>, element) as any;
 
   // Prevent immediate render to avoid "from" state conflicts in timelines
   const shouldDelayRender = position === '>' || position === '<' || (typeof position === 'number' && position > 0);
