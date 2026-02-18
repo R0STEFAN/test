@@ -2252,7 +2252,7 @@ export default function InteractionsPanel({
                                         });
                                         pendingClearRAFsRef.current.push(rafId1);
                                       }}
-                                      placeholder="0"
+                                      placeholder={prop.key === 'width' || prop.key === 'height' ? 'e.g. 80%, 200px' : '0'}
                                       className="text-xs"
                                     />
                                     <InputGroupAddon align="inline-end" className="text-xs text-muted-foreground">
@@ -2363,7 +2363,7 @@ export default function InteractionsPanel({
                                     });
                                     pendingClearRAFsRef.current.push(rafId1);
                                   }}
-                                  placeholder="0"
+                                  placeholder={prop.key === 'width' || prop.key === 'height' ? 'e.g. 80%, 200px' : '0'}
                                   className="text-xs"
                                 />
                                 <InputGroupAddon align="inline-end" className="text-xs text-muted-foreground">
