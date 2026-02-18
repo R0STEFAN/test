@@ -109,7 +109,7 @@ export const PROPERTY_OPTIONS: PropertyOption[] = [
     properties: [{
       key: 'width',
       unit: 'px',
-      defaultFrom: null,
+      defaultFrom: '0',
       defaultFromAfterCurrent: '0',
       defaultTo: '200',
     }],
@@ -120,7 +120,7 @@ export const PROPERTY_OPTIONS: PropertyOption[] = [
     properties: [{
       key: 'height',
       unit: 'px',
-      defaultFrom: null,
+      defaultFrom: '0',
       defaultFromAfterCurrent: '0',
       defaultTo: '200',
     }],
